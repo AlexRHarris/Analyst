@@ -22,6 +22,8 @@ class ScryfallConfig(BaseModel):
 
 class PerceptionConfig(BaseModel):
     regions: dict[str, list[int]] = Field(default_factory=dict)
+    zone_slots: dict[str, int] = Field(default_factory=dict)
+    phase_order: list[str] = Field(default_factory=list)
 
 
 class OCRConfig(BaseModel):

@@ -8,6 +8,7 @@ from .config import load
 from .db import DB
 from .perception.scryfall import build_phash_index
 from .server import make_app
+from .calibrate import calibrate as run_calibrate
 
 
 @click.group()
@@ -82,6 +83,17 @@ def games(ctx):
             f"{r['id']}  {r['started_at']}  -> {r['ended_at'] or 'in-progress':<26}  "
             f"{r['result'] or ''}"
         )
+
+
+@cli.command()
+@click.argument("screenshot", type=click.Path(exists=True))
+@click.option("--config-path", default="config/default.yaml", show_default=True)
+def calibrate(screenshot, config_path):
+    """Open SCREENSHOT in a window and click two corners per region.
+
+    Writes pixel-coordinate boxes back into config-path under perception.regions.
+    """
+    run_calibrate(screenshot, config_path)
 
 
 if __name__ == "__main__":
