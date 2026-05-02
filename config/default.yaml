@@ -1,0 +1,37 @@
+server:
+  host: 0.0.0.0
+  port: 8765
+  data_dir: ./data
+
+capture:
+  # Point this at your Linux box's IP. Both PCs must be on the same LAN.
+  server_url: http://192.168.1.100:8765/frame
+  fps: 1.0
+  # Hamming distance between consecutive perceptual hashes to count as "changed".
+  phash_threshold: 5
+  # mss monitor index. 0 = all monitors stitched, 1 = primary, 2 = secondary, ...
+  monitor: 1
+
+scryfall:
+  cache_dir: ./data/scryfall
+
+# Pixel-coordinate boxes [x1, y1, x2, y2] within the captured monitor.
+# Calibrate these by taking a screenshot of MTGO and measuring in any image editor.
+# The defaults below assume 1920x1080 — they WILL be wrong for your setup.
+perception:
+  regions:
+    phase_ribbon: [0, 980, 1920, 1020]
+    my_life: [50, 800, 150, 850]
+    opp_life: [50, 100, 150, 150]
+    my_hand: [400, 950, 1500, 1080]
+    my_battlefield: [400, 500, 1500, 800]
+    opp_battlefield: [400, 200, 1500, 500]
+    stack: [1600, 400, 1900, 700]
+
+ocr:
+  tesseract_cmd: tesseract
+
+llm:
+  base_url: http://localhost:11434
+  model: qwen2.5:7b
+  temperature: 0.1
