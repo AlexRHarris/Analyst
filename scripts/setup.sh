@@ -6,12 +6,12 @@ pip install -U pip
 pip install -e .
 echo
 echo "Setup OK. Next steps:"
-echo "  1. Install Ollama (https://ollama.com), then: ollama pull qwen2.5:7b"
-echo "  2. Install Tesseract:"
-echo "       Linux: sudo apt install tesseract-ocr"
-echo "       Mac:   brew install tesseract"
-echo "       Win:   https://github.com/UB-Mannheim/tesseract/wiki"
-echo "  3. analyst build-index --sets <recent_set_codes>   # e.g. --sets blb,dsk,fdn"
-echo "  4. Edit config/default.yaml: set capture.server_url and perception.regions"
-echo "  5. On the Linux box:    analyst serve"
-echo "  6. On the Windows box:  analyst capture"
+echo "  1. Install Ollama: https://ollama.com"
+echo "       ollama pull qwen2.5vl:7b"
+echo "  2. Edit config/default.yaml: set capture.server_url to the Linux box's LAN IP."
+echo "  3. (Optional) Build phash index for stronger card-name accuracy:"
+echo "       analyst build-index --sets <recent set codes>"
+echo "  4. On the Linux box:    analyst serve"
+echo "  5. On the Windows box:  analyst capture"
+echo
+echo "That's it. No region calibration needed — the VLM handles layout."

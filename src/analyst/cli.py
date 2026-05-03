@@ -4,11 +4,10 @@ import click
 import uvicorn
 
 from .capture import run as run_capture
+from .cards import build_index
 from .config import load
 from .db import DB
-from .perception.scryfall import build_phash_index
 from .server import make_app
-from .calibrate import calibrate as run_calibrate
 
 
 @click.group()
@@ -22,7 +21,7 @@ def cli(ctx, config):
 @cli.command()
 @click.pass_context
 def serve(ctx):
-    """Run the Linux-side receiver + perception + reasoning pipeline."""
+    """Run the Linux-side receiver: ROI gate -> VLM -> diff -> SQLite."""
     cfg = ctx.obj["cfg"]
     app = make_app(cfg)
     uvicorn.run(app, host=cfg.server.host, port=cfg.server.port)
@@ -31,7 +30,7 @@ def serve(ctx):
 @cli.command()
 @click.pass_context
 def capture(ctx):
-    """Run on the Windows PC. Capture MTGO frames and POST to server."""
+    """Run on the Windows PC. Capture MTGO frames at fps and POST to server."""
     cfg = ctx.obj["cfg"]
     run_capture(cfg)
 
@@ -40,32 +39,12 @@ def capture(ctx):
 @click.option("--sets", default=None, help="comma-separated set codes (limits scope; faster)")
 @click.option("--max-cards", default=None, type=int)
 @click.pass_context
-def build_index(ctx, sets, max_cards):
-    """Download Scryfall bulk data and build the perceptual-hash card index."""
+def build_index_cmd(ctx, sets, max_cards):
+    """Build the optional Scryfall phash index used to verify card names."""
     cfg = ctx.obj["cfg"]
     set_list = [s.strip() for s in sets.split(",")] if sets else None
-    out = build_phash_index(Path(cfg.scryfall.cache_dir), max_cards=max_cards, sets=set_list)
+    out = build_index(Path(cfg.scryfall.cache_dir), sets=set_list, max_cards=max_cards)
     click.echo(f"index written to {out}")
-
-
-@cli.command()
-@click.argument("game_id")
-@click.pass_context
-def replay(ctx, game_id):
-    """Print the event timeline for a recorded game."""
-    cfg = ctx.obj["cfg"]
-    db = DB(Path(cfg.server.data_dir) / "analyst.db")
-    with db.conn() as c:
-        rows = c.execute(
-            """SELECT ts, turn, phase, type, actor, target, payload_json
-               FROM events WHERE game_id = ? ORDER BY id""",
-            (game_id,),
-        ).fetchall()
-    for r in rows:
-        click.echo(
-            f"T{r['turn']} {r['phase']:<10} {r['type']:<22} "
-            f"{r['actor'] or '':<6} {r['target'] or ''}"
-        )
 
 
 @cli.command()
@@ -86,14 +65,23 @@ def games(ctx):
 
 
 @cli.command()
-@click.argument("screenshot", type=click.Path(exists=True))
-@click.option("--config-path", default="config/default.yaml", show_default=True)
-def calibrate(screenshot, config_path):
-    """Open SCREENSHOT in a window and click two corners per region.
-
-    Writes pixel-coordinate boxes back into config-path under perception.regions.
-    """
-    run_calibrate(screenshot, config_path)
+@click.argument("game_id")
+@click.pass_context
+def replay(ctx, game_id):
+    """Print the event timeline for a recorded game."""
+    cfg = ctx.obj["cfg"]
+    db = DB(Path(cfg.server.data_dir) / "analyst.db")
+    with db.conn() as c:
+        rows = c.execute(
+            """SELECT ts, turn, phase, type, actor, target, payload_json
+               FROM events WHERE game_id = ? ORDER BY id""",
+            (game_id,),
+        ).fetchall()
+    for r in rows:
+        click.echo(
+            f"T{r['turn']} {r['phase']:<22} {r['type']:<22} "
+            f"{r['actor'] or '':<6} {r['target'] or ''}"
+        )
 
 
 if __name__ == "__main__":

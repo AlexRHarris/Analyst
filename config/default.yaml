@@ -2,117 +2,26 @@ server:
   host: 0.0.0.0
   port: 8765
   data_dir: ./data
+  # ROI gate: split the incoming frame into a 4x4 grid; only call the VLM
+  # when at least one cell changed by >= roi_threshold bits of phash.
+  # Filters out mouse hover, animations, chat scrolling, etc.
+  roi_grid: 4
+  roi_threshold: 4
 
 capture:
-  # Linux box's IP from the Windows box's perspective. Same LAN.
+  # Linux box's IP from the Windows box's perspective.
   server_url: http://192.168.1.100:8765/frame
   fps: 1.0
-  # Hamming distance between consecutive perceptual hashes to count as "changed".
   phash_threshold: 5
-  # mss monitor index. 0 = stitched all monitors, 1 = primary, 2 = secondary, ...
   monitor: 1
-
-scryfall:
-  cache_dir: ./data/scryfall
-
-# Pixel-coordinate boxes [x1, y1, x2, y2] within the captured monitor.
-# These defaults assume a 1920x1080 MTGO window — they WILL be wrong for
-# your setup. Run `analyst calibrate <screenshot.png>` to set them quickly.
-perception:
-  regions:
-    # ---------------- Global / phase ----------------
-    phase_ribbon: [400, 1000, 1500, 1040]
-    turn_indicator: [10, 540, 100, 590]
-    priority_indicator: [10, 540, 30, 590]
-    match_score: [10, 10, 200, 50]
-
-    # ---------------- Opponent (top half) ----------------
-    opp_avatar: [10, 100, 90, 180]
-    opp_life: [50, 200, 130, 250]
-    opp_poison: [50, 250, 130, 290]
-    opp_energy: [50, 290, 130, 320]
-    opp_experience: [50, 320, 130, 350]
-    opp_library_count: [1750, 200, 1850, 250]
-    opp_graveyard_count: [1750, 260, 1850, 310]
-    opp_exile_count: [1750, 320, 1850, 370]
-    opp_hand_count: [400, 100, 480, 150]
-    opp_mana_pool: [150, 100, 400, 150]
-    opp_command_zone: [1750, 100, 1900, 200]
-    opp_monarch_marker: [1700, 50, 1750, 100]
-    opp_initiative_marker: [1650, 50, 1700, 100]
-    opp_ring_marker: [1600, 50, 1650, 100]
-    opp_day_night_marker: [1550, 50, 1600, 100]
-    opp_turn_timer: [10, 50, 100, 90]
-
-    # Opponent visible card zones
-    opp_hand: [400, 50, 1500, 150]                  # face-down strip
-    opp_battlefield_lands: [400, 200, 1500, 320]
-    opp_battlefield_creatures: [400, 320, 1500, 460]
-    opp_battlefield_other: [400, 460, 1500, 540]    # artifacts/enchantments/PWs
-    opp_graveyard: [1750, 280, 1880, 410]           # collapsed thumbnail
-    opp_exile: [1750, 340, 1880, 470]
-
-    # ---------------- Me (bottom half) ----------------
-    my_avatar: [10, 880, 90, 960]
-    my_life: [50, 800, 130, 850]
-    my_poison: [50, 850, 130, 880]
-    my_energy: [50, 880, 130, 910]
-    my_experience: [50, 910, 130, 940]
-    my_library_count: [1750, 800, 1850, 850]
-    my_graveyard_count: [1750, 860, 1850, 910]
-    my_exile_count: [1750, 920, 1850, 970]
-    my_hand_count: [400, 950, 480, 990]
-    my_mana_pool: [150, 950, 400, 990]
-    my_command_zone: [1750, 880, 1900, 980]
-    my_monarch_marker: [1700, 950, 1750, 1000]
-    my_initiative_marker: [1650, 950, 1700, 1000]
-    my_ring_marker: [1600, 950, 1650, 1000]
-    my_day_night_marker: [1550, 950, 1600, 1000]
-    my_turn_timer: [10, 1000, 100, 1040]
-
-    my_hand: [400, 950, 1500, 1080]
-    my_battlefield_lands: [400, 760, 1500, 880]
-    my_battlefield_creatures: [400, 620, 1500, 760]
-    my_battlefield_other: [400, 540, 1500, 620]
-    my_graveyard: [1750, 880, 1880, 1010]
-    my_exile: [1750, 940, 1880, 1070]
-
-    # ---------------- Stack & overlays ----------------
-    stack: [1500, 400, 1750, 700]
-    dialog: [600, 400, 1320, 680]   # center modal area when prompts appear
-
-  # How many slots to scan per zone strip. Adjust if your MTGO layout differs.
-  zone_slots:
-    opp_hand: 10
-    opp_battlefield_lands: 12
-    opp_battlefield_creatures: 12
-    opp_battlefield_other: 10
-    my_hand: 10
-    my_battlefield_lands: 12
-    my_battlefield_creatures: 12
-    my_battlefield_other: 10
-    stack: 6
-
-  # Phase ribbon: ordered list of phase names left-to-right. The detector picks
-  # the brightest segment as the active phase.
-  phase_order:
-    - untap
-    - upkeep
-    - draw
-    - precombat_main
-    - beginning_of_combat
-    - declare_attackers
-    - declare_blockers
-    - combat_damage
-    - end_of_combat
-    - postcombat_main
-    - end_step
-    - cleanup
-
-ocr:
-  tesseract_cmd: tesseract
 
 llm:
   base_url: http://localhost:11434
-  model: qwen2.5:7b
+  # Local default. Alternatives: qwen2.5vl:32b (higher accuracy, ~24GB VRAM),
+  # llama3.2-vision:11b, minicpm-v.
+  model: qwen2.5vl:7b
   temperature: 0.1
+  num_ctx: 8192
+
+scryfall:
+  cache_dir: ./data/scryfall

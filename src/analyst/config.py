@@ -1,4 +1,5 @@
 from pathlib import Path
+
 import yaml
 from pydantic import BaseModel, Field
 
@@ -7,6 +8,10 @@ class ServerConfig(BaseModel):
     host: str = "0.0.0.0"
     port: int = 8765
     data_dir: str = "./data"
+    # ROI gate: divide the frame into NxN cells and only call the VLM if any
+    # cell's perceptual hash changed by more than threshold bits.
+    roi_grid: int = 4
+    roi_threshold: int = 4
 
 
 class CaptureConfig(BaseModel):
@@ -16,33 +21,22 @@ class CaptureConfig(BaseModel):
     monitor: int = 1
 
 
-class ScryfallConfig(BaseModel):
-    cache_dir: str = "./data/scryfall"
-
-
-class PerceptionConfig(BaseModel):
-    regions: dict[str, list[int]] = Field(default_factory=dict)
-    zone_slots: dict[str, int] = Field(default_factory=dict)
-    phase_order: list[str] = Field(default_factory=list)
-
-
-class OCRConfig(BaseModel):
-    tesseract_cmd: str = "tesseract"
-
-
 class LLMConfig(BaseModel):
     base_url: str = "http://localhost:11434"
-    model: str = "qwen2.5:7b"
+    model: str = "qwen2.5vl:7b"
     temperature: float = 0.1
+    num_ctx: int = 8192
+
+
+class ScryfallConfig(BaseModel):
+    cache_dir: str = "./data/scryfall"
 
 
 class Config(BaseModel):
     server: ServerConfig = ServerConfig()
     capture: CaptureConfig = CaptureConfig()
-    scryfall: ScryfallConfig = ScryfallConfig()
-    perception: PerceptionConfig = PerceptionConfig()
-    ocr: OCRConfig = OCRConfig()
     llm: LLMConfig = LLMConfig()
+    scryfall: ScryfallConfig = ScryfallConfig()
 
 
 def load(path: str | Path = "config/default.yaml") -> Config:
