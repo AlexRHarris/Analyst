@@ -1,0 +1,23 @@
+# systemd user unit — install on the Linux box.
+#
+# Place at:  ~/.config/systemd/user/analyst.service
+# Enable:    systemctl --user daemon-reload
+#            systemctl --user enable --now analyst
+# Logs:      journalctl --user -u analyst -f
+#
+# Adjust WorkingDirectory and ExecStart to match where you cloned the repo.
+
+[Unit]
+Description=Analyst MTGO state tracker (server)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/Analyst
+ExecStart=%h/Analyst/.venv/bin/analyst serve
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target

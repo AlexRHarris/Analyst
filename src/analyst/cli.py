@@ -35,6 +35,27 @@ def capture(ctx):
     run_capture(cfg)
 
 
+@cli.command()
+@click.pass_context
+def ping(ctx):
+    """Hit the configured server's /health endpoint. Prints model + latency."""
+    import time
+    import httpx
+
+    cfg = ctx.obj["cfg"]
+    base = cfg.capture.server_url.rsplit("/", 1)[0]  # strip trailing /frame
+    url = f"{base}/health"
+    t0 = time.time()
+    try:
+        r = httpx.get(url, timeout=5.0)
+        r.raise_for_status()
+        dt = (time.time() - t0) * 1000
+        click.echo(f"OK  {url}  ({dt:.0f} ms)  {r.json()}")
+    except Exception as exc:
+        click.echo(f"FAIL  {url}  -> {exc}")
+        raise SystemExit(1)
+
+
 @cli.command(name="build-index")
 @click.option("--sets", default=None, help="comma-separated set codes (limits scope; faster)")
 @click.option("--max-cards", default=None, type=int)
