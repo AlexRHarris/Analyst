@@ -15,7 +15,7 @@ from .config import Config
 from .db import DB
 from .differ import diff
 from .state import GameState, PlayerState
-from .vlm import perceive
+from .vlm import perceive, warmup
 
 
 log = logging.getLogger("analyst")
@@ -27,6 +27,12 @@ def make_app(cfg: Config) -> FastAPI:
     data_dir = Path(cfg.server.data_dir)
     data_dir.mkdir(parents=True, exist_ok=True)
     db = DB(data_dir / "analyst.db")
+
+    @app.on_event("startup")
+    def _warm():
+        log.info("warming up Ollama model %s ...", cfg.llm.model)
+        warmup(cfg.llm)
+        log.info("model warm")
 
     state_cache: dict[str, GameState] = {}
     current = {"game_id": None, "roi_hashes": None}

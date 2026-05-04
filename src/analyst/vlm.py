@@ -152,6 +152,30 @@ def _compact_prior(prior: GameState) -> dict:
     }
 
 
+def warmup(cfg: LLMConfig) -> None:
+    """One-shot ping to load the model into Ollama memory.
+
+    Without this the first real frame pays a multi-minute cold start.
+    Subsequent calls reuse the loaded weights (Ollama keeps models warm
+    for ~5 minutes by default; bump OLLAMA_KEEP_ALIVE if your sessions
+    are longer than that).
+    """
+    try:
+        with httpx.Client(timeout=600) as c:
+            c.post(
+                f"{cfg.base_url.rstrip('/')}/api/chat",
+                json={
+                    "model": cfg.model,
+                    "messages": [{"role": "user", "content": "hi"}],
+                    "stream": False,
+                    "options": {"num_predict": 1, "num_ctx": cfg.num_ctx},
+                },
+            )
+    except Exception as exc:
+        # Non-fatal: log and continue. The first /frame call will retry.
+        print(f"[vlm.warmup] failed (non-fatal): {exc}")
+
+
 def perceive(cfg: LLMConfig, frame: Image.Image, prior: GameState) -> tuple[GameState, list[Event]]:
     img = _resize(frame, IMAGE_LONG_EDGE)
     buf = BytesIO()
@@ -160,7 +184,7 @@ def perceive(cfg: LLMConfig, frame: Image.Image, prior: GameState) -> tuple[Game
 
     user = "PRIOR:\n" + json.dumps(_compact_prior(prior)) + "\n\nReturn JSON."
 
-    with httpx.Client(timeout=180) as c:
+    with httpx.Client(timeout=600) as c:
         r = c.post(
             f"{cfg.base_url.rstrip('/')}/api/chat",
             json={
