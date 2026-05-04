@@ -1,6 +1,8 @@
 """Linux-side receiver. Gates frames, runs the VLM, diffs state, persists."""
 from __future__ import annotations
 
+import logging
+import traceback
 import uuid
 from io import BytesIO
 from pathlib import Path
@@ -14,6 +16,10 @@ from .db import DB
 from .differ import diff
 from .state import GameState, PlayerState
 from .vlm import perceive
+
+
+log = logging.getLogger("analyst")
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
 
 def make_app(cfg: Config) -> FastAPI:
@@ -65,6 +71,7 @@ def make_app(cfg: Config) -> FastAPI:
         try:
             new_state, extra_events = perceive(cfg.llm, img, prior)
         except Exception as exc:
+            log.error("perceive failed: %s\n%s", exc, traceback.format_exc())
             return {"ok": False, "error": str(exc)}
 
         events = diff(prior, new_state) + extra_events
@@ -72,6 +79,10 @@ def make_app(cfg: Config) -> FastAPI:
         db.save_snapshot(new_state)
         db.save_events(new_state.game_id, new_state.turn, new_state.phase, events)
         db.save_frame(new_state.game_id, phash, None)
+        log.info(
+            "frame ok game=%s turn=%s phase=%s events=%d",
+            new_state.game_id[:8], new_state.turn, new_state.phase, len(events),
+        )
 
         if any(e.type == "GAME_END" for e in events):
             db.end_game(
